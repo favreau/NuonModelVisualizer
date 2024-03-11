@@ -23,12 +23,12 @@
 import ROOT
 import numpy as np
 import math
-from bioexplorer import BioExplorer, TransferFunction, Vector3
+from bioexplorer import TransferFunction, Vector3
 import matplotlib.pyplot as plt
 
 class NuonModelVisualizer:
 
-    def __init__(self, bio_explorer, root_proton_file, root_collision_file, radius_multiplier=0.01, nb_sub_particles=66):
+    def __init__(self, bio_explorer, root_proton_file, root_collision_file, radius_multiplier=0.01):
         self._bio_explorer = bio_explorer
         self._core = bio_explorer.core_api()
         self._root_proton_file = ROOT.TFile.Open(root_proton_file)
@@ -43,9 +43,9 @@ class NuonModelVisualizer:
             self._Rfactor = 1.94
 
         self._radius_multiplier = radius_multiplier
-        self._nb_sub_particles = nb_sub_particles
 
-    def _rotate_z(self, point, angle):
+    @staticmethod
+    def _rotate_z(point, angle):
         """
         Rotate a 3D point around the z-axis by a given angle.
         
@@ -65,6 +65,7 @@ class NuonModelVisualizer:
         rotated_point = np.dot(rotation_matrix, point)
         return rotated_point
     
+    @staticmethod
     def _rotate_vector(vector, theta, phi, psi):
         Rx = np.array([[1, 0, 0],
                     [0, math.cos(theta), -math.sin(theta)],
@@ -80,7 +81,7 @@ class NuonModelVisualizer:
         rotation_matrix = Rz.dot(Ry).dot(Rx)
         return np.dot(rotation_matrix, vector)
 
-    def _load_proton_1(self, ax, sub_particles_to_ignore, marker_size=1.0, collision_maker_size=2.0, j_cut=1.0, output_folder=None, position=[0, 0, 0], z_rotation_angle=0.0):
+    def _load_proton_1(self, ax, sub_particles_to_ignore, marker_size=1.0, collision_maker_size=2.0, j_cut=1.0, output_folder=None, position=[0, 0, 0], z_rotation_angle=0.0, z_scale=1.0):
         i1 = getattr(self._T_collisions, 'i1')
         phi1 = getattr(self._T_collisions, 'phi1')
         
@@ -97,7 +98,7 @@ class NuonModelVisualizer:
         v1p_radii = list()
         v1n_positions = list()
         v1n_radii = list()
-        for i in range(self._nb_sub_particles):
+        for i in range(len(vypart1)):
             if i in sub_particles_to_ignore:
                 continue
             vx1 = self._Rfactor * vxpart1[i] * math.cos(phi1) - self._Rfactor * vypart1[i] * math.sin(phi1);
@@ -109,7 +110,7 @@ class NuonModelVisualizer:
             vy1p = vy1 * (1 + drp1)
             vy1n = vy1 * (1 - drp1)
 
-            z = vzpart1[i]
+            z = vzpart1[i] * z_scale
 
             point = np.array([vx1p, vy1p, z])
             rotated_v1p = self._rotate_z(point, z_rotation_angle)
@@ -132,7 +133,7 @@ class NuonModelVisualizer:
         status = self._bio_explorer.add_spheres('Proton 1 P', v1p_positions, v1p_radii, Vector3(1, 0, 0))
         status = self._bio_explorer.add_spheres('Proton 1 N', v1n_positions, v1n_radii, Vector3(0, 0, 1))        
 
-    def _load_proton_2(self, ax, sub_particles_to_ignore, marker_size=1.0, collision_maker_size=2.0, j_cut=1.0, output_folder=None, position=[0, 0, 0], z_rotation_angle=0.0):
+    def _load_proton_2(self, ax, sub_particles_to_ignore, marker_size=1.0, collision_maker_size=2.0, j_cut=1.0, output_folder=None, position=[0, 0, 0], z_rotation_angle=0.0, z_scale=1.0):
         i2 = getattr(self._T_collisions, 'i2')
         phi2 = getattr(self._T_collisions, 'phi2')
 
@@ -147,7 +148,7 @@ class NuonModelVisualizer:
         vzpart2 = np.array(getattr(self._T_protons, 'z'))
         drp2 = np.array(getattr(self._T_protons, 'drp'))
         
-        for i in range(self._nb_sub_particles):
+        for i in range(len(vxpart2)):
             if i in sub_particles_to_ignore:
                 continue
             vx2 = self._Rfactor * vxpart2[i] * math.cos(phi2) - self._Rfactor * vypart2[i] * math.sin(phi2);
@@ -159,7 +160,7 @@ class NuonModelVisualizer:
             vy2p = vy2 * (1 + drp2)
             vy2n = vy2 * (1 - drp2)
 
-            z = vzpart2[i]
+            z = vzpart2[i] * z_scale
 
             point = np.array([vx2p, vy2p, z])
             rotated_v2p = self._rotate_z(point, z_rotation_angle)
@@ -434,7 +435,10 @@ class NuonModelVisualizer:
             
             if type not in targets_radii:
                 targets_radii[type] = list()
-            targets_radii[type].append(0.0)
+            if magnetic:
+                targets_radii[type].append(0.1 * rjet)
+            else:
+                targets_radii[type].append(0.0)
 
         for t in types:
             if magnetic:
@@ -455,7 +459,7 @@ class NuonModelVisualizer:
                     targets=targets[t], targets_radii=targets_radii[t],
                     color=colors[t], opacity=0.3)
 
-    def plot_event(self, event_id, colormap=None, magnetic=False, timestamp=0.0, voxel_size=1.0, value_range=[0.0, 0.02], export_filename=None, marker_size=1.0, show_grid=False):
+    def plot_event(self, event_id, colormap=None, magnetic=False, timestamp=0.0, voxel_size=1.0, value_range=[0.0, 0.02], export_filename=None, marker_size=1.0, show_grid=False, z_scale=1.0):
         self._T_collisions.GetEntry(event_id)
 
         status = self._bio_explorer.reset_scene()
@@ -482,10 +486,10 @@ class NuonModelVisualizer:
 
         self._load_proton_1(
             ax, proton_1_sub_particle_ids, marker_size=marker_size, position=[0,0,-timestamp],
-            z_rotation_angle=timestamp * rotation_speed)
+            z_rotation_angle=timestamp * rotation_speed, z_scale=z_scale)
         self._load_proton_2(
             ax, proton_2_sub_particle_ids, marker_size=marker_size, position=[0,0, timestamp],
-            z_rotation_angle=-timestamp * rotation_speed)
+            z_rotation_angle=-timestamp * rotation_speed, z_scale=z_scale)
 
         if timestamp>=0:
             nchj, jetphi, jettheta = self._load_particles(ax, magnetic, timestamp)
@@ -496,8 +500,8 @@ class NuonModelVisualizer:
             self._bio_explorer.add_spheres(
                 name='Bounds',
                 positions=[
-                    Vector3(-4.493167877197266, -3.151878595352173, -3.7470436096191406),
-                    Vector3(4.370408058166504, 3.2409679889678955, 4.623395919799805),
+                    Vector3(-5, -5, -5),
+                    Vector3(5, 5, 5),
                 ],
                 radii=[0.0001, 0.0001])
 
@@ -512,6 +516,9 @@ class NuonModelVisualizer:
             for model_id in model_ids:
                 self._core.update_model(id=model_id, visible=False)
             
+            '''Again!'''
+            tf.set_range(value_range)
+            
         if export_filename:
             plt.savefig(export_filename)
         plt.show()
@@ -522,4 +529,27 @@ class NuonModelVisualizer:
             gradient_shading=gradient_shading, gradient_offset=gradient_offset,
             epsilon=epsilon, accumulation_steps=accumulation_steps, use_octree=use_octree
         )
-        self._core.set_renderer()        
+        self._core.set_renderer()
+
+    def get_nb_events(self):
+        return self._T_collisions.GetEntries()
+
+    def get_jets(self):
+        d_njetsCMS = dict()
+        d_jcaseCMS = dict()
+        d_jetNames = {0: 'pi', 1: 'k', 2: 'p'}
+
+        for event_id in range(self._T_collisions.GetEntries()):
+            self._T_collisions.GetEntry(event_id)
+            nb_jets = getattr(self._T_collisions, 'njetsCMS')
+            
+            d_njetsCMS[event_id] = nb_jets
+
+            jcaseCMS = getattr(self._T_collisions, 'jcaseCMS')
+            d_jcaseCMS[event_id] = dict()
+            for j in range(nb_jets):
+                type = jcaseCMS[j]
+                if type not in d_jcaseCMS[event_id].keys():
+                    d_jcaseCMS[event_id][type] = 0
+                d_jcaseCMS[event_id][type] += 1
+        return d_njetsCMS, d_jcaseCMS, d_jetNames
