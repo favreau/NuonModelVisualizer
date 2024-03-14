@@ -126,9 +126,10 @@ class NuonModelVisualizer:
                 Vector3(rotated_v1n[0] + position[0], rotated_v1n[1] + position[1], z + position[2]))
             v1n_radii.append(radius * self._radius_multiplier)
         
-            ax.plot(vx1p, vy1p, marker='o', color='red', markersize=radius)
-            ax.plot(vx1n, vy1n, marker='o', color='blue', markersize=radius)
-            ax.plot([vx1p, vx1n], [vy1p, vy1n], color='grey', linestyle='--', linewidth=0.5)
+            if ax:
+                ax.plot(vx1p, vy1p, marker='o', color='red', markersize=radius)
+                ax.plot(vx1n, vy1n, marker='o', color='blue', markersize=radius)
+                ax.plot([vx1p, vx1n], [vy1p, vy1n], color='grey', linestyle='--', linewidth=0.5)
             
         status = self._bio_explorer.add_spheres('Proton 1 P', v1p_positions, v1p_radii, Vector3(1, 0, 0))
         status = self._bio_explorer.add_spheres('Proton 1 N', v1n_positions, v1n_radii, Vector3(0, 0, 1))        
@@ -176,9 +177,10 @@ class NuonModelVisualizer:
                 Vector3(rotated_v2n[0] + position[0], rotated_v2n[1] + position[1], z + position[2]))
             v2n_radii.append(radius * self._radius_multiplier)
             
-            ax.plot(vx2p, vy2p, marker='o', color='magenta', markersize=radius)
-            ax.plot(vx2n, vy2n, marker='o', color='cyan', markersize=radius)
-            ax.plot([vx2p, vx2n], [vy2p, vy2n], color='grey', linestyle='--', linewidth=0.5)
+            if ax:
+                ax.plot(vx2p, vy2p, marker='o', color='magenta', markersize=radius)
+                ax.plot(vx2n, vy2n, marker='o', color='cyan', markersize=radius)
+                ax.plot([vx2p, vx2n], [vy2p, vy2n], color='grey', linestyle='--', linewidth=0.5)
         
         status = self._bio_explorer.add_spheres('Proton 2 P', v2p_positions, v2p_radii, Vector3(0, 1, 1))
         status = self._bio_explorer.add_spheres('Proton 2 N', v2n_positions, v2n_radii, Vector3(1, 0, 1))
@@ -230,10 +232,11 @@ class NuonModelVisualizer:
                 marker_color = 'r'
 
             radius = collision_maker_size * ms
-            ax.plot(
-                xcol[i], ycol[i],
-                marker='o', color=marker_color,
-                markersize=radius)
+            if ax:
+                ax.plot(
+                    xcol[i], ycol[i],
+                    marker='o', color=marker_color,
+                    markersize=radius)
             
             col_positions.append(Vector3(x, y, 0.0))
             col_radii.append(radius * self._radius_multiplier)
@@ -337,12 +340,13 @@ class NuonModelVisualizer:
                     color=colors[t]
                 )
             else:
-                for k in range(len(origins[t])):
-                    ax.plot(
-                        [origins[t][k].x, targets[t][k].x],
-                        [origins[t][k].y, targets[t][k].y],
-                        color=[colors[t].x, colors[t].y, colors[t].z],
-                        markersize=origins_radii[t][k])
+                if ax:
+                    for k in range(len(origins[t])):
+                        ax.plot(
+                            [origins[t][k].x, targets[t][k].x],
+                            [origins[t][k].y, targets[t][k].y],
+                            color=[colors[t].x, colors[t].y, colors[t].z],
+                            markersize=origins_radii[t][k])
                 self._bio_explorer.add_cones(
                     name='Line %03d' % t,
                     origins=origins[t], origins_radii=origins_radii[t],
@@ -350,7 +354,7 @@ class NuonModelVisualizer:
                     color=colors[t])
         return nchj, jetphi, jettheta
     
-    def _load_jets(self, ax, magnetic, nchj, jetphi, jettheta, timestamp):
+    def _load_jets(self, magnetic, nchj, jetphi, jettheta, timestamp):
         xcol = getattr(self._T_collisions, 'xcol')
         ycol = getattr(self._T_collisions, 'ycol')
         njetsCMS = getattr(self._T_collisions, 'njetsCMS')
@@ -442,16 +446,16 @@ class NuonModelVisualizer:
 
         for t in types:
             if magnetic:
-                # self._bio_explorer.add_spheres(
-                #     name='Jets origins %d' % t,
-                #     positions=origins[t], radii=origins_radii[t],
-                #     color=colors[t]
-                # )
                 self._bio_explorer.add_spheres(
-                    name='Jets targets %d' % t,
-                    positions=targets[t], radii=targets_radii[t],
+                    name='Jets origins %d' % t,
+                    positions=origins[t], radii=origins_radii[t],
                     color=colors[t]
                 )
+                # self._bio_explorer.add_spheres(
+                #     name='Jets targets %d' % t,
+                #     positions=targets[t], radii=targets_radii[t],
+                #     color=colors[t]
+                # )
             else:
                 self._bio_explorer.add_cones(
                     name='Jets %d' % t,
@@ -459,11 +463,14 @@ class NuonModelVisualizer:
                     targets=targets[t], targets_radii=targets_radii[t],
                     color=colors[t], opacity=0.3)
 
-    def plot_event(self, event_id, colormap=None, magnetic=False, timestamp=0.0, voxel_size=1.0, value_range=[0.0, 0.02], export_filename=None, marker_size=1.0, show_grid=False, z_scale=1.0):
+    def render_event(self, event_id, colormap=None, magnetic=False, timestamp=0.0, voxel_size=1.0, value_range=[0.0, 0.02], export_filename=None, marker_size=1.0, show_grid=False, z_scale=1.0, show_plot=True):
         self._T_collisions.GetEntry(event_id)
 
         status = self._bio_explorer.reset_scene()
-        fig, ax = plt.subplots(figsize=(6,6))
+        fig = None
+        ax = None
+        if show_plot:
+            plt.subplots(figsize=(6,6))
 
         x2offset = getattr(self._T_collisions, 'x2offset')
         y2offset = getattr(self._T_collisions, 'y2offset')
@@ -493,7 +500,7 @@ class NuonModelVisualizer:
 
         if timestamp>=0:
             nchj, jetphi, jettheta = self._load_particles(ax, magnetic, timestamp)
-            self._load_jets(ax, magnetic, nchj, jetphi, jettheta, timestamp)
+            self._load_jets(magnetic, nchj, jetphi, jettheta, timestamp)
 
         if magnetic:
             '''Scene bounds'''
@@ -511,6 +518,7 @@ class NuonModelVisualizer:
                 bioexplorer=self._bio_explorer, model_id=model_id,
                 filename=colormap,
                 value_range=value_range,
+                show_widget=show_plot
             )
             model_ids = self._bio_explorer.get_model_ids()['ids'][:-1]
             for model_id in model_ids:
@@ -519,9 +527,10 @@ class NuonModelVisualizer:
             '''Again!'''
             tf.set_range(value_range)
             
-        if export_filename:
-            plt.savefig(export_filename)
-        plt.show()
+        if show_plot:
+            if export_filename:
+                plt.savefig(export_filename)
+            plt.show()
 
     def set_field_parameters(self, cutoff_distance=1e6, sampling_rate=1.0, gradient_shading=False, gradient_offset=0.01, epsilon=0.25, accumulation_steps=0, use_octree=True):
         self._core.set_field_parameters(
