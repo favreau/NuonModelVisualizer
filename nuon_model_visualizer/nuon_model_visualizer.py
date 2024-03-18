@@ -56,7 +56,6 @@ class NuonModelVisualizer:
         Returns:
             numpy.array: The rotated 3D point.
         """
-        x, y, z = point
         cos_theta = np.cos(angle)
         sin_theta = np.sin(angle)
         rotation_matrix = np.array([[cos_theta, -sin_theta, 0],
@@ -81,7 +80,7 @@ class NuonModelVisualizer:
         rotation_matrix = Rz.dot(Ry).dot(Rx)
         return np.dot(rotation_matrix, vector)
 
-    def _load_proton_1(self, ax, sub_particles_to_ignore, marker_size=1.0, collision_maker_size=2.0, j_cut=1.0, output_folder=None, position=[0, 0, 0], z_rotation_angle=0.0, z_scale=1.0):
+    def _load_proton_1(self, ax, sub_particles_to_ignore, marker_size=1.0, position=[0, 0, 0], z_rotation_angle=0.0, z_scale=1.0):
         i1 = getattr(self._T_collisions, 'i1')
         phi1 = getattr(self._T_collisions, 'phi1')
         
@@ -134,7 +133,7 @@ class NuonModelVisualizer:
         status = self._bio_explorer.add_spheres('Proton 1 P', v1p_positions, v1p_radii, Vector3(1, 0, 0))
         status = self._bio_explorer.add_spheres('Proton 1 N', v1n_positions, v1n_radii, Vector3(0, 0, 1))        
 
-    def _load_proton_2(self, ax, sub_particles_to_ignore, marker_size=1.0, collision_maker_size=2.0, j_cut=1.0, output_folder=None, position=[0, 0, 0], z_rotation_angle=0.0, z_scale=1.0):
+    def _load_proton_2(self, ax, sub_particles_to_ignore, marker_size=1.0, position=[0, 0, 0], z_rotation_angle=0.0, z_scale=1.0):
         i2 = getattr(self._T_collisions, 'i2')
         phi2 = getattr(self._T_collisions, 'phi2')
 
@@ -185,7 +184,7 @@ class NuonModelVisualizer:
         status = self._bio_explorer.add_spheres('Proton 2 P', v2p_positions, v2p_radii, Vector3(0, 1, 1))
         status = self._bio_explorer.add_spheres('Proton 2 N', v2n_positions, v2n_radii, Vector3(1, 0, 1))
 
-    def _load_collisions(self, ax, marker_size=1.0, collision_maker_size=2.0, j_cut=1.0, output_folder=None):
+    def _load_collisions(self, ax, collision_maker_size=2.0, j_cut=1.0):
         njetsCMS = getattr(self._T_collisions, 'njetsCMS')
         ptjetsCMS = getattr(self._T_collisions, 'ptjetsCMS')
         jcaseCMS = getattr(self._T_collisions, 'jcaseCMS')
@@ -197,15 +196,11 @@ class NuonModelVisualizer:
         # Proton 1 information
         i1 = getattr(self._T_collisions, 'i1')
         self._T_protons.GetEntry(i1)
-        vxpart1 = np.array(getattr(self._T_protons, 'x'))
-        vypart1 = np.array(getattr(self._T_protons, 'y'))
         proton_1_sub_particle_ids = list()
 
         # Proton 1 information
         i2 = getattr(self._T_collisions, 'i2')
         self._T_protons.GetEntry(i2)
-        vxpart2 = np.array(getattr(self._T_protons, 'x'))
-        vypart2 = np.array(getattr(self._T_protons, 'y'))
         proton_2_sub_particle_ids = list()
 
         col_positions = list()
@@ -462,7 +457,16 @@ class NuonModelVisualizer:
                     origins=origins[t], origins_radii=origins_radii[t],
                     targets=targets[t], targets_radii=targets_radii[t],
                     color=colors[t], opacity=0.3)
-
+                
+    def _set_materials(self, model_id, color, opacity=1.0):
+        material_ids = self._bio_explorer.get_material_ids(model_id)['ids']
+        colors = list()
+        opacities = list()
+        for _ in material_ids:
+            colors.append(color)
+            opacities.append(opacity)
+        return self._bio_explorer.set_materials(model_ids=[model_id], material_ids=material_ids, diffuse_colors=colors, specular_colors=colors, opacities=opacities)
+                
     def render_event(self, event_id, colormap=None, magnetic=False, timestamp=0.0, voxel_size=1.0, value_range=[0.0, 0.02], export_filename=None, marker_size=1.0, show_grid=False, z_scale=1.0, show_plot=True):
         self._T_collisions.GetEntry(event_id)
 
@@ -486,10 +490,18 @@ class NuonModelVisualizer:
             if timestamp>=0:
                 proton_1_sub_particle_ids, proton_2_sub_particle_ids = self._load_collisions(ax)
 
-            if False: # Show protons : TODO Add SDF pancake!!
-                corrector = 1.5 # Why??
-                self._bio_explorer.add_spheres(name='Proton 1', positions=[Vector3(0, 0, -timestamp)], radii=[corrector * 0.876 * 1.3], color=Vector3(0.5, 0.5, 0.0), opacity=0.25)
-                self._bio_explorer.add_spheres(name='Proton 2', positions=[Vector3(x2offset, y2offset, timestamp)], radii=[corrector * 0.876 * 1.3], color=Vector3(0.0, 0.0, 0.5), opacity=0.25)
+            corrector = 1.5 # Why??
+            radius = corrector * 0.876 * 1.3
+            radii = Vector3(radius, radius, radius * 0.4)
+            self._bio_explorer.add_ellipsoid(
+                name='Proton 1', position=Vector3(0, 0, -timestamp), radii=radii)
+            self._set_materials(
+                self._bio_explorer.get_model_ids()['ids'][-1], color=[0.5, 0.5, 0.0], opacity=0.25)
+            self._bio_explorer.add_ellipsoid(
+                name='Proton 2', position=Vector3(x2offset, y2offset, timestamp), radii=radii)
+            self._set_materials(
+                self._bio_explorer.get_model_ids()['ids'][-1], color=[0.0, 0.0, 0.5], opacity=0.25)
+            
 
         self._load_proton_1(
             ax, proton_1_sub_particle_ids, marker_size=marker_size, position=[0,0,-timestamp],
