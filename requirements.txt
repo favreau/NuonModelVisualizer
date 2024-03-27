@@ -17,5 +17,4 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 # All rights reserved. Do not distribute without further notice.
 
-
-bioexplorer~=1.7.1
+# bioexplorer~=1.7.1

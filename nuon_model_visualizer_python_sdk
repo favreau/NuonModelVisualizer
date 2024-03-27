@@ -1,0 +1,6 @@
+#!/bin/sh
+
+cd /app/root_v6.30.04.Linux-ubuntu22.04-x86_64-gcc11.4/bin
+. thisroot.sh
+. /app/NuonModelVisualizer/env/bin/activate
+jupyter notebook --allow-root --ip=0.0.0.0 --port=8888 --notebook-dir=/app/NuonModelVisualizer/notebooks --NotebookApp.token='' --NotebookApp.password=''
