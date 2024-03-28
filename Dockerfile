@@ -79,6 +79,7 @@ RUN mkdir -p ${ROCKETS_SRC} \
    && . /app/NuonModelVisualizer/env/bin/activate \
    && pip install . --use-deprecated=legacy-resolver \
    && pip install numpy==1.22.4 \
+   && pip install --upgrade jupyterlab jupyterlab_server jupyter_server traitlets nbformat \
    && cd /app \
    && rm -rf ${ROCKETS_SRC}
 
