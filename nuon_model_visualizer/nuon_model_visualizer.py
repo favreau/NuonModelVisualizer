@@ -5,20 +5,22 @@
 
 #
 # Copyright (c) 2023-2024, Cyrille Favreau (cyrille.favreau@gmail.com)
+#                          René Brun (rene.brun@cern.ch)
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 2 of the License, or
-# (at your option) any later version.
+#    Licensed under the Apache License, Version 2.0 (the "License");
+#    you may not use this file except in compliance with the License.
+#    You may obtain a copy of the License at
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#        http://www.apache.org/licenses/LICENSE-2.0
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
-#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
+
+# This code is a port from the C code written by Rene Brun, and used by the
+# ROOT software to produce the visualization of the collisions
 
 import ROOT
 import numpy as np
@@ -532,11 +534,6 @@ class NuonModelVisualizer:
                         positions=origins[t], radii=origins_radii[t],
                         color=colors[t]
                     )
-                    # self._bio_explorer.add_spheres(
-                    #     name='Jets targets %d' % t,
-                    #     positions=targets[t], radii=targets_radii[t],
-                    #     color=colors[t]
-                    # )
             else:
                 self._bio_explorer.add_cones(
                     name='Jets %d' % t,
@@ -580,7 +577,7 @@ class NuonModelVisualizer:
             if timestamp>=0:
                 proton_1_sub_particle_ids, proton_2_sub_particle_ids = self._load_collisions(ax, magnetic)
 
-            corrector = 1.5 # Why??
+            corrector = 1.5 # To be checked!
             radius = corrector * 0.876 * 1.3
             radii = Vector3(radius, radius, radius * 0.4)
 
