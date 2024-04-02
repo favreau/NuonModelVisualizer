@@ -26,6 +26,15 @@ import math
 from bioexplorer import TransferFunction, Vector3
 import matplotlib.pyplot as plt
 
+COLOR_BLACK = Vector3(0, 0, 0)
+COLOR_RED = Vector3(1, 0, 0)
+COLOR_GREEN = Vector3(0, 1, 0)
+COLOR_BLUE = Vector3(0, 0, 1)
+COLOR_CYAN = Vector3(0, 1, 1)
+COLOR_MAGENTA = Vector3(1, 0, 1)
+COLOR_YELLOW = Vector3(1, 0, 0)
+COLOR_GREY = Vector3(0.5, 0.5, 0.5)
+
 class NuonModelVisualizer:
 
     def __init__(self, bio_explorer, root_proton_file, root_collision_file, radius_multiplier=0.01, particles_as_vectors=False):
@@ -146,11 +155,19 @@ class NuonModelVisualizer:
                 ax.plot([vx1p, vx1n], [vy1p, vy1n], color='grey', linestyle='--', linewidth=0.5)
 
         if self._particles_as_vectors:
-            self._bio_explorer.add_cones('Proton 1 P', v1p_positions, v1p_targets, v1p_radii, v1p_target_radii, Vector3(1, 0, 0))
-            self._bio_explorer.add_cones('Proton 1 N', v1n_positions, v1n_targets,v1n_radii, v1n_target_radii, Vector3(0, 0, 1))        
+            self._bio_explorer.add_cones('Proton 1 P', v1p_positions, v1p_targets, v1p_radii, v1p_target_radii, COLOR_RED)
+            self._bio_explorer.add_cones('Proton 1 N', v1n_positions, v1n_targets,v1n_radii, v1n_target_radii, COLOR_BLUE)
         else:    
-            self._bio_explorer.add_spheres('Proton 1 P', v1p_positions, v1p_radii, Vector3(1, 0, 0))
-            self._bio_explorer.add_spheres('Proton 1 N', v1n_positions, v1n_radii, Vector3(0, 0, 1))        
+            self._bio_explorer.add_spheres('Proton 1 P', v1p_positions, v1p_radii, COLOR_RED)
+            self._bio_explorer.add_spheres('Proton 1 N', v1n_positions, v1n_radii, COLOR_BLUE)
+
+        half_v1p_radii = list()
+        for radius in v1p_radii:
+            half_v1p_radii.append(radius * 0.25)
+        half_v1n_radii = list()
+        for radius in v1n_radii:
+            half_v1n_radii.append(radius * 0.25)
+        self._bio_explorer.add_cones('Proton 1 Links', v1p_positions, v1n_positions, half_v1p_radii, half_v1n_radii, COLOR_GREY)
 
     def _load_proton_2(self, ax, sub_particles_to_ignore, marker_size=1.0, position=[0, 0, 0], z_rotation_angle=0.0, z_scale=1.0):
         i2 = getattr(self._T_collisions, 'i2')
@@ -212,13 +229,21 @@ class NuonModelVisualizer:
                 ax.plot([vx2p, vx2n], [vy2p, vy2n], color='grey', linestyle='--', linewidth=0.5)
         
         if self._particles_as_vectors:
-            self._bio_explorer.add_cones('Proton 2 P', v2p_positions, v2p_targets, v2p_radii, v2p_target_radii, Vector3(1, 0, 0))
-            self._bio_explorer.add_cones('Proton 2 N', v2n_positions, v2n_targets, v2n_radii, v2n_target_radii, Vector3(0, 0, 1))        
+            self._bio_explorer.add_cones('Proton 2 P', v2p_positions, v2p_targets, v2p_radii, v2p_target_radii, COLOR_MAGENTA)
+            self._bio_explorer.add_cones('Proton 2 N', v2n_positions, v2n_targets, v2n_radii, v2n_target_radii, COLOR_CYAN)
         else:    
-            self._bio_explorer.add_spheres('Proton 2 P', v2p_positions, v2p_radii, Vector3(1, 0, 0))
-            self._bio_explorer.add_spheres('Proton 2 N', v2n_positions, v2n_radii, Vector3(0, 0, 1))        
+            self._bio_explorer.add_spheres('Proton 2 P', v2p_positions, v2p_radii, COLOR_MAGENTA)
+            self._bio_explorer.add_spheres('Proton 2 N', v2n_positions, v2n_radii, COLOR_CYAN)
 
-    def _load_collisions(self, ax, collision_maker_size=2.0, j_cut=1.0):
+        half_v2p_radii = list()
+        for radius in v2p_radii:
+            half_v2p_radii.append(radius * 0.25)
+        half_v2n_radii = list()
+        for radius in v2n_radii:
+            half_v2n_radii.append(radius * 0.25)
+        self._bio_explorer.add_cones('Proton 2 Links', v2p_positions, v2n_positions, half_v2p_radii, half_v2n_radii, COLOR_GREY)
+
+    def _load_collisions(self, ax, magnetic=False, collision_maker_size=2.0, j_cut=1.0):
         njetsCMS = getattr(self._T_collisions, 'njetsCMS')
         ptjetsCMS = getattr(self._T_collisions, 'ptjetsCMS')
         jcaseCMS = getattr(self._T_collisions, 'jcaseCMS')
@@ -269,23 +294,25 @@ class NuonModelVisualizer:
                     marker='o', color=marker_color,
                     markersize=radius)
             
-            col_positions.append(Vector3(x, y, 0.0))
-            col_targets.append(Vector3(x, y, radius))
+            col_positions.append(Vector3(x, y, 0.0)) # Rene: z = 0.0 because this is the point of impact
+            col_targets.append(Vector3(x, y, radius * self._radius_multiplier))
             col_radii.append(radius * self._radius_multiplier)
             col_target_radii.append(0.0)
 
             proton_1_sub_particle_ids.append(icol[i])
             proton_2_sub_particle_ids.append(jcol[i])
-            
-        if self._particles_as_vectors:
-            self._bio_explorer.add_cones('Collisions', col_positions, col_targets, col_radii, col_target_radii, Vector3(0, 1, 0))
-        else:
-            self._bio_explorer.add_spheres('Collisions', col_positions, col_radii, Vector3(0, 1, 0))
+
+        if not magnetic: # Should collisions appear in the computation of the field? Only for visualization purpose?
+            color = Vector3(0, 1, 0) # Green
+            if self._particles_as_vectors:
+                self._bio_explorer.add_cones('Collisions', col_positions, col_targets, col_radii, col_target_radii, color)
+            else:
+                self._bio_explorer.add_spheres('Collisions', col_positions, col_radii, color)
         return proton_1_sub_particle_ids, proton_2_sub_particle_ids
     
-    def _load_particles(self, ax, magnetic, timestamp=1.0):
+    def _load_new_particles(self, ax, magnetic, timestamp=1.0):
         nchCMS = getattr(self._T_collisions, 'nchCMS')
-        pjet = getattr(self._T_collisions, 'pjet')
+        pjet = getattr(self._T_collisions, 'pjet') # Rene: What is pjet? Number of jets?
         ppx = getattr(self._T_collisions, 'ppx')
         ppy = getattr(self._T_collisions, 'ppy')
         ppz = getattr(self._T_collisions, 'ppz')
@@ -305,9 +332,10 @@ class NuonModelVisualizer:
         jetphi = np.zeros(300)
         jettheta = np.zeros(300)
 
-        # Loop on particles
+        ''' Loop on particles '''
         for i in range(nchCMS):
             jet = pjet[i]
+            ''' Position '''
             px = ppx[i]
             py = ppy[i]
             pz = ppz[i]
@@ -317,23 +345,27 @@ class NuonModelVisualizer:
             p = math.sqrt(px * px + py * py + pz * pz)
             lwid = math.log(3 + p) * 0.002
 
-            color = Vector3(1, 1, 1)
+            ''' Particle type '''
             type = ptype[i]
             types.add(type)
+            
+            ''' Color according to type '''
+            color = Vector3(1, 1, 1)
             if type == 0:
-                color = Vector3(0, 1, 0)
+                color = COLOR_GREEN
             elif type == 1:
-                color = Vector3(0, 0, 1)
+                color = COLOR_BLUE
             elif type == 2:
-                color = Vector3(1, 0, 0)
+                color = COLOR_RED
             elif type > 2:
-                color = Vector3(1, 1, 0)
+                color = COLOR_YELLOW
             colors[type] = color
 
+            ''' Origin '''
             if jet < 0:
-                x1 = 1 * px / p
-                y1 = 1 * py / p
-                z1 = 1 * pz / p  * timestamp
+                x1 = px / p
+                y1 = py / p
+                z1 = pz / p  * timestamp
             else:
                 x1 = xcol[jet]
                 y1 = ycol[jet]
@@ -351,7 +383,8 @@ class NuonModelVisualizer:
                 origins_radii[type] = list()
             origins_radii[type].append(lwid)
         
-            plen = math.log(p + 3) / 4
+            ''' Target '''
+            plen = math.log(p + 3.0) / 4.0
             x2 = x1 + px * plen / p
             y2 = y1 + py * plen / p
             z2 = (z1 + pz * plen / p) * timestamp
@@ -363,6 +396,7 @@ class NuonModelVisualizer:
                 targets_radii[type] = list()
             targets_radii[type].append(lwid)
 
+        ''' Add particles to visualization '''
         for t in types:
             if magnetic:
                 if self._particles_as_vectors:
@@ -372,11 +406,6 @@ class NuonModelVisualizer:
                         targets=targets[t], targets_radii=targets_radii[t],
                         color=colors[t])
                 else:
-                    # self._bio_explorer.add_spheres(
-                    #     name='Jets origins %d' % t,
-                    #     positions=origins[t], radii=origins_radii[t],
-                    #     color=colors[t]
-                    # )
                     self._bio_explorer.add_spheres(
                         name='Jets targets %d' % t,
                         positions=targets[t], radii=targets_radii[t],
@@ -390,6 +419,7 @@ class NuonModelVisualizer:
                             [origins[t][k].y, targets[t][k].y],
                             color=[colors[t].x, colors[t].y, colors[t].z],
                             markersize=origins_radii[t][k])
+                        
                 self._bio_explorer.add_cones(
                     name='Line %03d' % t,
                     origins=origins[t], origins_radii=origins_radii[t],
@@ -430,12 +460,13 @@ class NuonModelVisualizer:
                 
             type = jcaseCMS[j]
             types.add(type)
+            color = COLOR_BLACK
             if type == 0:
-                color = Vector3(0, 1, 0)
+                color = COLOR_GREEN
             elif type == 1:
-                color = Vector3(0, 0, 1)
+                color = COLOR_BLUE
             elif type == 2:
-                color = Vector3(1, 0, 0)
+                color = COLOR_RED
             colors[type] = color
 
             phi = phijetsCMS[j]
@@ -522,7 +553,10 @@ class NuonModelVisualizer:
             opacities.append(opacity)
         return self._bio_explorer.set_materials(model_ids=[model_id], material_ids=material_ids, diffuse_colors=colors, specular_colors=colors, opacities=opacities)
                 
-    def render_event(self, event_id, colormap=None, magnetic=False, timestamp=0.0, voxel_size=1.0, value_range=[0.0, 0.02], export_filename=None, marker_size=1.0, show_grid=False, z_scale=1.0, show_plot=True):
+    def render_event(self, event_id, colormap=None, magnetic=False,
+                     timestamp=0.0, voxel_size=1.0, value_range=[0.0, 0.02],
+                     export_filename=None, marker_size=1.0, show_grid=False, z_scale=1.0,
+                     show_plot=True, show_proton_1=True, show_proton_2=True, show_jets=True):
         self._T_collisions.GetEntry(event_id)
 
         status = self._bio_explorer.reset_scene()
@@ -538,35 +572,42 @@ class NuonModelVisualizer:
 
         proton_1_sub_particle_ids = list()
         proton_2_sub_particle_ids = list()
+        
         if not magnetic:
             if show_grid:
                 self._bio_explorer.add_grid(min_value=-5.0, max_value=5.0, interval=0.5, radius=0.001, show_planes=True, opacity=0.2)
             
             if timestamp>=0:
-                proton_1_sub_particle_ids, proton_2_sub_particle_ids = self._load_collisions(ax)
+                proton_1_sub_particle_ids, proton_2_sub_particle_ids = self._load_collisions(ax, magnetic)
 
             corrector = 1.5 # Why??
             radius = corrector * 0.876 * 1.3
             radii = Vector3(radius, radius, radius * 0.4)
-            self._bio_explorer.add_ellipsoid(
-                name='Proton 1', position=Vector3(0, 0, -timestamp), radii=radii)
-            self._set_materials(
-                self._bio_explorer.get_model_ids()['ids'][-1], color=[0.5, 0.5, 0.0], opacity=0.25)
-            self._bio_explorer.add_ellipsoid(
-                name='Proton 2', position=Vector3(x2offset, y2offset, timestamp), radii=radii)
-            self._set_materials(
-                self._bio_explorer.get_model_ids()['ids'][-1], color=[0.0, 0.0, 0.5], opacity=0.25)
+
+            if show_proton_1:
+                self._bio_explorer.add_ellipsoid(
+                    name='Proton 1', position=Vector3(0, 0, -timestamp), radii=radii)
+                self._set_materials(
+                    self._bio_explorer.get_model_ids()['ids'][-1], color=[0.5, 0.5, 0.0], opacity=0.25)
+
+            if show_proton_2:            
+                self._bio_explorer.add_ellipsoid(
+                    name='Proton 2', position=Vector3(x2offset, y2offset, timestamp), radii=radii)
+                self._set_materials(
+                    self._bio_explorer.get_model_ids()['ids'][-1], color=[0.0, 0.0, 0.5], opacity=0.25)
             
 
-        self._load_proton_1(
-            ax, proton_1_sub_particle_ids, marker_size=marker_size, position=[0,0,-timestamp],
-            z_rotation_angle=timestamp * rotation_speed, z_scale=z_scale)
-        self._load_proton_2(
-            ax, proton_2_sub_particle_ids, marker_size=marker_size, position=[0,0, timestamp],
-            z_rotation_angle=-timestamp * rotation_speed, z_scale=z_scale)
+        if show_proton_1:
+            self._load_proton_1(
+                ax, proton_1_sub_particle_ids, marker_size=marker_size, position=[0,0,-timestamp],
+                z_rotation_angle=timestamp * rotation_speed, z_scale=z_scale)
+        if show_proton_2:
+            self._load_proton_2(
+                ax, proton_2_sub_particle_ids, marker_size=marker_size, position=[0,0, timestamp],
+                z_rotation_angle=-timestamp * rotation_speed, z_scale=z_scale)
 
-        if timestamp>=0:
-            nchj, jetphi, jettheta = self._load_particles(ax, magnetic, timestamp)
+        if show_jets and timestamp >= 0.0:
+            nchj, jetphi, jettheta = self._load_new_particles(ax, magnetic, timestamp)
             self._load_jets(magnetic, nchj, jetphi, jettheta, timestamp)
 
         if magnetic:
